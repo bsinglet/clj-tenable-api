@@ -85,4 +85,5 @@
     (println (str "Launching scan with scan result ID "
       (tenable-sc-launch-scan (nth keys 0) (nth keys 1) 1)))
     ;;(println (str "Creating scan with Active Scan ID "
-    ;;  (tenable-sc-create-scan (nth keys 0) (nth keys 1))))))
+    ;;  (tenable-sc-create-scan (nth keys 0) (nth keys 1))))
+    ))
