@@ -9,3 +9,4 @@ pom.xml.asc
 /.nrepl-port
 .hgignore
 .hg/
+/src/clj_tenable_api/tenable_sc_keys.txt
