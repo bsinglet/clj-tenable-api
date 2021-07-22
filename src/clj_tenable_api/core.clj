@@ -49,6 +49,7 @@
       :ipList ip-list
       :repository {:id 1}
       :policy {:id policy-id}
+      :type "policy"
       })
   ([]
     (generate-active-scan-body "Test scan" "1000003" "192.168.8.161")))
@@ -84,6 +85,6 @@
         (tenable-sc-list-users (nth keys 0) (nth keys 1))))
     (println (str "Launching scan with scan result ID "
       (tenable-sc-launch-scan (nth keys 0) (nth keys 1) 1)))
-    ;;(println (str "Creating scan with Active Scan ID "
-    ;;  (tenable-sc-create-scan (nth keys 0) (nth keys 1))))
+    (println (str "Creating scan with Active Scan ID "
+      (tenable-sc-create-scan (nth keys 0) (nth keys 1))))
     ))
