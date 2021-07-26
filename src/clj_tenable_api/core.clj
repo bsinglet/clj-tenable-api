@@ -1,5 +1,10 @@
+;; Filename: core.clj
+;; Description: Basic Tenable.io and Tenable.SC API functionality.
+;; Created by: Benjamin M. Singleton
+;; Date: 2021/07/20
 (ns clj-tenable-api.core
   (:require [clj-http.client :as client]
+            [clojure.data.json :as clj-json]
             [cheshire.core :as json]
             [cheshire.parse :as parse]))
 
@@ -56,7 +61,8 @@
     (generate-active-scan-body "Test scan" "1000003" "192.168.8.161")))
 
 (defn stringify-tenable-payload
-  "Casts a Clojure map (possibly containing maps and vectors) as a
+  "OBSOLETE:
+  Casts a Clojure map (possibly containing maps and vectors) as a
   string, converting the key values to json-like keys and inserting
   commas between consecutive maps."
   [body]
@@ -75,7 +81,7 @@
           :as :json
           :headers {"Accept" "application/json", "x-apikey"
             (str "accessKey=" access-key ";secretKey=" secret-key)}
-          :body (stringify-tenable-payload (generate-active-scan-body))
+          :body (clj-json/write-str (generate-active-scan-body))
             })
     [:body :response :id]))
 
@@ -115,7 +121,7 @@
           :as :json
           :headers {"Accept" "application/json", "x-apikey"
             (str "accessKey=" access-key ";secretKey=" secret-key)}
-          :body (stringify-tenable-payload (generate-analysis-query hostname plugin_id))
+          :body (clj-json/write-str (generate-analysis-query hostname plugin_id))
             })
     [:body]))
 
@@ -129,10 +135,10 @@
     (println
       (map-usernames-to-ids
         (tenable-sc-list-users (nth keys 0) (nth keys 1))))
-    ;;(println (str "Launching scan with scan result ID "
-    ;;  (tenable-sc-launch-scan (nth keys 0) (nth keys 1) 1)))
-    ;;(println (str "Creating scan with Active Scan ID "
-    ;;  (tenable-sc-create-scan (nth keys 0) (nth keys 1))))
+    (let [new-scan (tenable-sc-create-scan (nth keys 0) (nth keys 1))]
+      (println (str "Creating scan with Active Scan ID " new-scan))
+      (println (str "Launching scan with scan result ID "
+        (tenable-sc-launch-scan (nth keys 0) (nth keys 1) new-scan))))
     (println (str "Querying plugin 19506 on host 192.168.8.161 "
       (tenable-sc-vuln-analysis (nth keys 0) (nth keys 1) "192.168.8.161" "19506")))
     ))
