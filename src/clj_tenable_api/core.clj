@@ -55,7 +55,7 @@
   ([]
     (generate-active-scan-body "Test scan" "1000003" "192.168.8.161")))
 
-(defn stringify-active-scan-body
+(defn stringify-tenable-payload
   "Casts a Clojure map (possibly containing maps and vectors) as a
   string, converting the key values to json-like keys and inserting
   commas between consecutive maps."
@@ -75,10 +75,9 @@
           :as :json
           :headers {"Accept" "application/json", "x-apikey"
             (str "accessKey=" access-key ";secretKey=" secret-key)}
-          :body (stringify-active-scan-body (generate-active-scan-body))
+          :body (stringify-tenable-payload (generate-active-scan-body))
             })
     [:body :response :id]))
-
 
 (defn generate-analysis-query
   "Generates a Tenable.SC Vulnerability Analysis query, filtering on
@@ -116,7 +115,7 @@
           :as :json
           :headers {"Accept" "application/json", "x-apikey"
             (str "accessKey=" access-key ";secretKey=" secret-key)}
-          :body (stringify-active-scan-body (generate-analysis-query hostname plugin_id))
+          :body (stringify-tenable-payload (generate-analysis-query hostname plugin_id))
             })
     [:body]))
 
