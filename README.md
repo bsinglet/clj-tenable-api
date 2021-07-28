@@ -10,7 +10,6 @@ Then, you can execute the project by running `lein run` from the same directory 
 
 ## License
 
-Copyright © 2021 FIXME
+Copyright © 2021 Benjamin M. Singleton
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Distributed under the GNU General Public License v3.0.
