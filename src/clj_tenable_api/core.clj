@@ -50,15 +50,16 @@
 (defn generate-active-scan-body
   "Generates the payload for a Tenable.SC Active Scan based on a given
   policy ID and a list of target IPs."
-  ([scan-name policy-id ip-list]
+  ([scan-name policy-id ip-list credential-id]
     {:name scan-name
       :ipList ip-list
       :repository {:id 1}
       :policy {:id policy-id}
       :type "policy"
+      :credentials [{:id credential-id}]
       })
   ([]
-    (generate-active-scan-body "Test scan" "1000003" "192.168.8.161")))
+    (generate-active-scan-body "Test scan" "1000003" "192.168.8.161" "1000003")))
 
 (defn stringify-tenable-payload
   "OBSOLETE:
@@ -74,8 +75,8 @@
   "Creates a new Active Scan in Tenable.SC, using the
   generate-active-scan-body function."
   ([access-key secret-key]
-    (tenable-sc-create-scan access-key secret-key "Test scan" "1000003" "192.168.8.161"))
-  ([access-key secret-key scan-name policy-id ip-list]
+    (tenable-sc-create-scan access-key secret-key "Test scan" "1000003" "192.168.8.161" "1000003"))
+  ([access-key secret-key scan-name policy-id ip-list credential-id]
   (get-in
     (client/post
       "https://192.168.50.201/rest/scan"
@@ -83,7 +84,7 @@
           :as :json
           :headers {"Accept" "application/json", "x-apikey"
             (str "accessKey=" access-key ";secretKey=" secret-key)}
-          :body (clj-json/write-str (generate-active-scan-body scan-name policy-id ip-list))
+          :body (clj-json/write-str (generate-active-scan-body scan-name policy-id ip-list credential-id))
             })
     [:body :response :id])))
 
@@ -130,8 +131,7 @@
     :source "entry"
     :login username
     :password password
-  }
-  )
+  })
 
 (defn tenable-sc-create-credential
   "Creates a Tenable.SC credential object, has to be supplied the results from
@@ -254,24 +254,43 @@
             })
     [:body]))
 
+(defn create-run-destroy
+  ""
+  [access-key secret-key username password]
+  (let [policy-id (tenable-sc-create-policy access-key secret-key "My scan-policy" 1000004)]
+    (println (str "Creating new Advanced Scan Policy with ID " policy-id))
+    (let [credential-id (tenable-sc-create-credential access-key secret-key
+        (generate-credential-object-ssh "My SSH credential" username password))]
+      (println (str "Creating new SSH crednetial object with ID " credential-id))
+      (let [new-scan (tenable-sc-create-scan access-key secret-key
+          "My Active Scan" policy-id "192.168.8.161" credential-id)]
+        (println (str "Creating scan with Active Scan ID " new-scan))
+        (let [scan-result-id
+            (tenable-sc-launch-scan access-key secret-key new-scan)]
+          (println (str "Launching scan with scan result ID "
+            scan-result-id))
+
+          ; TODO - Instead, periodically check the scan result's status, but
+          ; fail out if it doesn't complete in the time limit.
+          (println "Waiting 5 minutess before deleting anything, so the scan has time to queue up.")
+          (Thread/sleep (* 5 60 1000)))
+
+        (println (str "Deleting Active Scan ID " new-scan))
+        (tenable-sc-delete-active-scan access-key secret-key new-scan))
+        (println (str "Deleting Credential object ID " credential-id))
+        (tenable-sc-delete-credential access-key secret-key credential-id))
+        (println (str "Deleting scan policy ID " policy-id))
+        (tenable-sc-delete-scan-policy access-key secret-key policy-id)))
+
 (defn -main
   "Make a simple http request."
   [& args]
   (let [keys (clojure.string/split-lines
     (slurp "src/clj_tenable_api/tenable_sc_keys.txt"))]
-    (println
-      (map-usernames-to-ids
-        (tenable-sc-list-users (nth keys 0) (nth keys 1))))
-    (let [policy-id (tenable-sc-create-policy (nth keys 0) (nth keys 1) "My scan-policy" 1000004)]
-      (println (str "Creating new Advanced Scan Policy with ID " policy-id))
-      (let [new-scan (tenable-sc-create-scan (nth keys 0) (nth keys 1) "My Active Scan" policy-id "192.168.8.161")]
-        (println (str "Creating scan with Active Scan ID " new-scan))
-        (println (str "Launching scan with scan result ID "
-          (tenable-sc-launch-scan (nth keys 0) (nth keys 1) new-scan)))
-        (println (str "Deleting Active Scan ID " new-scan))
-        (tenable-sc-delete-active-scan (nth keys 0) (nth keys 1) new-scan))
-      (println (str "Deleting scan policy ID " policy-id))
-      (tenable-sc-delete-scan-policy (nth keys 0) (nth keys 1) policy-id))
-    (println (str "Querying plugin 19506 on host 192.168.8.161 "
-      (tenable-sc-vuln-analysis (nth keys 0) (nth keys 1) "192.168.8.161" "19506")))
+    (create-run-destroy (nth keys 0) (nth keys 1) "test-user" "password")
+    ;(println
+    ;  (map-usernames-to-ids
+    ;    (tenable-sc-list-users (nth keys 0) (nth keys 1))))
+    ;(println (str "Querying plugin 19506 on host 192.168.8.161 "
+    ;  (tenable-sc-vuln-analysis (nth keys 0) (nth keys 1) "192.168.8.161" "19506")))
     ))
