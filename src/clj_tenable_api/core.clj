@@ -87,6 +87,67 @@
             })
     [:body :response :id])))
 
+(defn generate-credential-object-windows
+  "Creates the payload for a Tenable.SC Windows credential object, using basic
+  password authentication."
+  [credential-name username password domain]
+  {
+    :name credential-name
+    :authType "password"
+    :type "windows"
+    :username username
+    :password password
+    :domain domain  ; this field is optional, use "" to leave it out.
+  })
+
+(defn generate-credential-object-ssh
+  "Creates the payload for a Tenable.SC SSH credential object, using sudo as
+  the escalation method."
+  [credential-name username password]
+  {
+    :name credential-name
+    :authType "password"
+    :type "ssh"
+    :username username
+    :password password
+    :privilegeEscalation "sudo"
+    :escalationUsername ""  ; leave blank to sudo as root
+    :escalationPassword password  ; generally, the sudo password should be the escalating user's password
+    :escalationPath ""  ; leave as blank to let Nessus use common locations for sudo
+  })
+
+(defn generate-credential-object-oracle
+  "Creates the payload for a Tenable.SC Oracle db credential object."
+  [credential-name username password sid]
+  {
+    :name credential-name
+    :authType "password"
+    :dbType "Oracle"
+    :type "database"
+    :oracleAuthType "NORMAL"
+    :oracle_service_type "SID"
+    :port "1521"
+    :source "entry"
+    :login username
+    :password password
+  }
+  )
+
+(defn tenable-sc-create-credential
+  "Creates a Tenable.SC credential object, has to be supplied the results from
+  one of the generate-credential-object-* functions."
+  [access-key secret-key payload]
+  (get-in
+    (client/post
+      "https://192.168.50.201/rest/credential"
+        {:insecure? true
+          :as :json
+          :headers {"Accept" "application/json", "x-apikey"
+            (str "accessKey=" access-key ";secretKey=" secret-key)}
+          :body (clj-json/write-str payload)
+            })
+    [:body :response :id]))
+
 (defn generate-advanced-scan-policy
   "Specifies the essential fields for an Advanced Network Scan policy, with an
   audit file, too."
@@ -112,6 +173,19 @@
           :body (clj-json/write-str
             (generate-advanced-scan-policy policy-name audit-file-id))
             })
+    [:body :response :id]))
+
+(defn tenable-sc-delete-credential
+  "Deletes the given Tenable.SC credential object."
+  [access-key secret-key credential-id]
+  (get-in
+    (client/delete
+      (str "https://192.168.50.201/rest/credential/" credential-id)
+      {:insecure? true
+       :as :json
+       :headers {"Accept" "application/json", "x-apikey"
+         (str "accessKey=" access-key ";secretKey=" secret-key)}
+        })
     [:body :response :id]))
 
 (defn tenable-sc-delete-scan-policy
@@ -179,8 +253,6 @@
           :body (clj-json/write-str (generate-analysis-query hostname plugin_id))
             })
     [:body]))
-
-;; (client/put "http://example.com/api" {:body "my PUT body"})
 
 (defn -main
   "Make a simple http request."
