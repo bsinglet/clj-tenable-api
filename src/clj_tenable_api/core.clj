@@ -254,6 +254,16 @@
             })
     [:body]))
 
+(defn tenable-sc-scan-status
+  ""
+  [access-key secret-key scan-result-id]
+  (get-in
+    (client/get (str "https://192.168.50.201/rest/scanResult/" scan-result-id "?fields=name%2Cdescription%2CdiagnosticAvailable%2Cowner%2CownerGroup%2CimportStatus%2CimportStart%2CimportFinish%2CimportDuration%2CioSyncStatus%2CioSyncStart%2CioSyncFinish%2CioSyncDuration%2CtotalIPs%2CscannedIPs%2CcompletedIPs%2CcompletedChecks%2CtotalChecks%2Cstatus%2CjobID%2CerrorDetails%2CdownloadAvailable%2CdataFormat%2CfinishTime%2CdownloadFormat%2CscanID%2Crunning%2CimportErrorDetails%2CioSyncErrorDetails%2CinitiatorID%2CstartTime%2Crepository%2Cdetails%2CtimeoutAction%2CrolloverSchedule%2Cprogress%2CdataSourceID%2CresultType%2CresultSource%2CscanDuration%2CcanManage%2CcanUse%2CSCI%2CagentScanUUID%2CagentScanContainerUUID%2CresultsSyncID%2CretrievalStatus%2Corganization") {:insecure? true
+    :as :json
+    :headers {"Accept" "application/json",
+    "x-apikey" (str "accessKey=" access-key ";secretKey=" secret-key)}})
+    [:body :response :importStatus]))
+
 (defn create-run-destroy
   ""
   [access-key secret-key username password]
@@ -270,10 +280,18 @@
           (println (str "Launching scan with scan result ID "
             scan-result-id))
 
-          ; TODO - Instead, periodically check the scan result's status, but
-          ; fail out if it doesn't complete in the time limit.
-          (println "Waiting 5 minutess before deleting anything, so the scan has time to queue up.")
-          (Thread/sleep (* 5 60 1000)))
+          (loop [time-elapsed 0]
+            (if (> time-elapsed (* 5 60 1000))
+              true
+              (if (= (tenable-sc-scan-status access-key secret-key
+                  scan-result-id) "Finished")
+                (do
+                  (println (str "Scan " scan-result-id " finished."))
+                  (recur (* 6 60 1000)))
+                (do
+                  (println "Scan " scan-result-id " still running. Waiting 30 seconds before checking scan status again.")
+                  (Thread/sleep (* 30 1000))
+                  (recur (+ time-elapsed (* 30 1000))))))))
 
         (println (str "Deleting Active Scan ID " new-scan))
         (tenable-sc-delete-active-scan access-key secret-key new-scan))
@@ -288,9 +306,4 @@
   (let [keys (clojure.string/split-lines
     (slurp "src/clj_tenable_api/tenable_sc_keys.txt"))]
     (create-run-destroy (nth keys 0) (nth keys 1) "test-user" "password")
-    ;(println
-    ;  (map-usernames-to-ids
-    ;    (tenable-sc-list-users (nth keys 0) (nth keys 1))))
-    ;(println (str "Querying plugin 19506 on host 192.168.8.161 "
-    ;  (tenable-sc-vuln-analysis (nth keys 0) (nth keys 1) "192.168.8.161" "19506")))
     ))
