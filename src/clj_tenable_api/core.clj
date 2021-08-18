@@ -264,6 +264,12 @@
     "x-apikey" (str "accessKey=" access-key ";secretKey=" secret-key)}})
     [:body :response :importStatus]))
 
+(defn get-last-observed-timestamp
+  "Returns the Unix timestamp for the last observed datetime of a given
+   plugin on a given host."
+  [hostname access-key secret-key target plugin-id]
+  (:lastSeen (first (get-in (tenable-sc-vuln-analysis hostname access-key secret-key target plugin-id) [:response :results]))))
+
 (defn create-run-destroy
   ""
   [hostname access-key secret-key username password]
